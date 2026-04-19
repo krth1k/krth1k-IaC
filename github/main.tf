@@ -7,10 +7,11 @@ terraform {
   }
 
   backend "s3" {
-    bucket  = "krth1k-terraform-backend"
-    key     = "krth1k-IaC/github/terraform.tfstate"
-    region  = "ap-south-1"
-    profile = "personal"
+    bucket       = "krth1k-terraform-backend"
+    key          = "krth1k-IaC/github/terraform.tfstate"
+    region       = "ap-south-1"
+    profile      = "personal"
+    use_lockfile = true
   }
 }
 

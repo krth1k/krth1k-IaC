@@ -1,0 +1,3 @@
+keys/**/*
+.vault_pass
+inventory.yml

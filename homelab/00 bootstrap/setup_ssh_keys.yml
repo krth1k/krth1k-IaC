@@ -1,0 +1,66 @@
+---
+- name: Generate SSH key pair locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    keys_dir: "{{ playbook_dir }}/../keys"
+    key_name: bot
+
+  tasks:
+    - name: Ensure keys directory exists
+      ansible.builtin.file:
+        path: "{{ keys_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Generate SSH key pair
+      community.crypto.openssh_keypair:
+        path: "{{ keys_dir }}/{{ key_name }}"
+        type: ed25519
+        comment: "krth1k-iac"
+        mode: "0600"
+        force: false
+
+- name: Create dedicated deploy user and upload public key
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    keys_dir: "{{ playbook_dir }}/../keys"
+    key_name: bot
+    deploy_user: bot
+
+  tasks:
+    - name: Create deploy user
+      ansible.builtin.user:
+        name: "{{ deploy_user }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Ensure .ssh directory exists for deploy user
+      ansible.builtin.file:
+        path: "/home/{{ deploy_user }}/.ssh"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0700"
+
+    - name: Add public key to deploy user authorized_keys
+      ansible.posix.authorized_key:
+        user: "{{ deploy_user }}"
+        key: "{{ lookup('file', keys_dir + '/' + key_name + '.pub') }}"
+        exclusive: true
+        state: present
+
+    - name: Grant deploy user passwordless sudo
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ deploy_user }}"
+        content: "{{ deploy_user }} ALL=(ALL) NOPASSWD: ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"

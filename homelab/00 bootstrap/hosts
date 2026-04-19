@@ -1,0 +1,13 @@
+[pi5]
+192.168.1.100
+
+[rog]
+192.168.1.101
+
+[all:vars]
+ansible_ssh_user=bot
+ansible_ssh_private_key_file=./keys/bot
+
+[pi5:vars]
+
+[rog:vars]

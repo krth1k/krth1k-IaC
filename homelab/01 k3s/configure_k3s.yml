@@ -1,0 +1,49 @@
+---
+- name: Import kube cluster playbook
+  ansible.builtin.import_playbook: k3s.orchestration.site
+
+- name: Install MetalLb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    kubeconfig_path: "~/.kube/config"
+    metallb_version: v0.15.3
+    metallb_ip_range: "192.168.1.150-192.168.1.160"
+
+  tasks:
+    - name: Deploy MetalLB using kubectl apply
+      ansible.builtin.command:
+        cmd: "kubectl --kubeconfig {{ kubeconfig_path }} apply -f https://raw.githubusercontent.com/metallb/metallb/{{ metallb_version }}/config/manifests/metallb-native.yaml"
+      register: apply_result
+      changed_when: "'created' in apply_result.stdout or 'configured' in apply_result.stdout"
+    - name: Wait for MetalLB controller deployment to be available
+      ansible.builtin.command:
+        cmd: "kubectl --kubeconfig {{ kubeconfig_path }} rollout status deployment/controller -n metallb-system --timeout=180s"
+      changed_when: false
+    - name: Configure MetalLB address pool
+      ansible.builtin.shell: |
+        cat <<EOF | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+        apiVersion: metallb.io/v1beta1
+        kind: IPAddressPool
+        metadata:
+          namespace: metallb-system
+          name: default-pool
+        spec:
+          addresses:
+          - "{{ metallb_ip_range }}"
+        EOF
+      changed_when: false
+
+    - name: Configure MetalLB L2Advertisement
+      ansible.builtin.shell: |
+        cat <<EOF | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+        apiVersion: metallb.io/v1beta1
+        kind: L2Advertisement
+        metadata:
+          namespace: metallb-system
+          name: default-pool
+        spec: {}
+        EOF
+      changed_when: false

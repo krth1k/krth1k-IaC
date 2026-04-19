@@ -1,0 +1,16 @@
+[pi5]
+192.168.1.100
+
+[rog]
+192.168.1.101
+
+[all:vars]
+ansible_ssh_user=krth1k
+
+[pi5:vars]
+ansible_ssh_pass=pi_password
+ansible_become_pass=pi_password
+
+[rog:vars]
+ansible_ssh_pass=rog_password
+ansible_become_pass=rog_password
